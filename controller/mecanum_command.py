@@ -2,6 +2,7 @@ import bluetooth
 import keyboard
 import time
 import argparse
+import sys
 
 
 def ascii_art():
@@ -27,18 +28,18 @@ def ascii_art():
 
 def command_line(sock):
     print("\nBluetooth terminal (type 'exit' to quit).")
+    sock.send("Mecanum control : terminal")
     while True:
         message = input("Enter a message: ")
         if message.lower() == "exit":
             break
         sock.send(f"{message}\n")
         print(f"Message sent: {message}")
-    sock.close()
-    print("Disconnected.")
+    mode_choice(sock)
 
 
 def zqsd(sock):
-    print("\nBluetooth terminal (type 'exit' to quit).")
+    print("\n")
     last_command = None
 
     while True:
@@ -63,15 +64,12 @@ def zqsd(sock):
             last_command = "d"
 
         elif keyboard.is_pressed("esc"):
-            break
+            command_line(sock)
 
         else:
-            if last_command != "stop":
-                sock.send("stop\n")
-                last_command = "stop"
-        time.sleep(0.1)
-    sock.close()
-    print("Disconnected.")
+            sock.send("stop\n")
+            last_command = "stop"
+        time.sleep(0.01)
 
 
 MODES = [
@@ -126,6 +124,10 @@ def mode_choice(sock):
     for i, j in enumerate(MODES):
         print(f"{[i+1]} {j['name']}")
     choice = ask_number(len(MODES))
+    if choice == 0:
+        sock.close()
+        print("Disconnected.")
+        sys.exit()
     MODES[choice - 1]["function"](sock)
 
 
@@ -168,6 +170,7 @@ if __name__ == "__main__":
         address, name = selected_device
         print(f"You selected: {name} - {address}")
         sock = connect_to_device(address)
+
         if sock:
             if args.command_line:
                 command_line(sock)
